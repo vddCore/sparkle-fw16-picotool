@@ -9,4 +9,9 @@ add_library(picoboot_connection_cxx INTERFACE)
 target_sources(picoboot_connection_cxx INTERFACE
         ${CMAKE_CURRENT_LIST_DIR}/picoboot_connection_cxx.cpp)
 
-target_link_libraries(picoboot_connection_cxx INTERFACE picoboot_connection)
+
+if (WIN32)
+    target_link_libraries(picoboot_connection_cxx INTERFACE picoboot_connection legacy_stdio_definitions)
+else ()
+    target_link_libraries(picoboot_connection_cxx INTERFACE picoboot_connection)
+endif ()

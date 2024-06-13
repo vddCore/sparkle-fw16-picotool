@@ -16,7 +16,7 @@
 #define output(format,...) ((void)0)
 #endif
 
-static bool verbose;
+static bool verbose = true;
 
 // todo test sparse binary (well actually two range is this)
 
@@ -25,6 +25,9 @@ static bool verbose;
 #define PRODUCT_ID_PICOPROBE   0x0004u
 #define PRODUCT_ID_MICROPYTHON 0x0005u
 #define PRODUCT_ID_STDIO_USB   0x000au
+
+#define VENDOR_ID_FRAMEWORK_INC 0x32acu
+#define PRODUCT_ID_LED_MATRIX 0x0020u
 
 uint32_t crc32_for_byte(uint32_t remainder) {
     const uint32_t POLYNOMIAL = 0x4C11DB7;
@@ -65,7 +68,8 @@ enum picoboot_device_result picoboot_open_device(libusb_device *device, libusb_d
         output("Failed to read device descriptor");
     }
     if (!ret) {
-        if (desc.idVendor != VENDOR_ID_RASPBERRY_PI) {
+        if (desc.idVendor != VENDOR_ID_RASPBERRY_PI && desc.idVendor != VENDOR_ID_FRAMEWORK_INC) {
+            
             return dr_vidpid_unknown;
         }
         switch (desc.idProduct) {
@@ -78,8 +82,30 @@ enum picoboot_device_result picoboot_open_device(libusb_device *device, libusb_d
             case PRODUCT_ID_RP2_USBBOOT:
                 break;
             default:
-                return dr_vidpid_unknown;
+                {
+                    if(desc.idVendor == VENDOR_ID_FRAMEWORK_INC && desc.idProduct == PRODUCT_ID_LED_MATRIX)
+                    {
+                        
+                        ret = libusb_open(device, dev_handle);
+                        char product_string[254] = { 0 };
+
+                        if (!ret)
+                        {
+                            libusb_get_string_descriptor_ascii(*dev_handle, desc.iProduct, product_string, sizeof(product_string));
+                            libusb_close(*dev_handle);
+                        }
+
+                        if (strstr(product_string, "| SPARKLE"))
+                        {
+                            return dr_vidpid_stdio_usb;
+                        }
+                    }
+                    
+                    return dr_vidpid_unknown;
+                }
+            
         }
+        
         ret = libusb_get_active_config_descriptor(device, &config);
         if (ret && verbose) {
             output("Failed to read config descriptor\n");
